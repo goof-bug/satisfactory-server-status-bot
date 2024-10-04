@@ -21,4 +21,4 @@ jobs:
               with:
                   files: target/release/sssb
                   prerelease: ${{ contains(github.ref, '-') }}
-                  latest: ${{ !contains(github.ref, '-') }}
+                  make_latest: ${{ !contains(github.ref, '-') }}
