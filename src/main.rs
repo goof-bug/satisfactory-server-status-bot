@@ -1,12 +1,9 @@
 use dotenv::dotenv;
-use poise::{
-    serenity_prelude::{self, CreateEmbed},
-    CreateReply,
-};
+use poise::{serenity_prelude as serenity, CreateReply};
+use std::env;
 use tokio::time::{sleep, Duration};
 
 mod satisfactory;
-use satisfactory::{get_status, Players};
 
 // Error type to be returned by methods
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -23,10 +20,10 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 async fn status(ctx: Context<'_>) -> Result<(), Error> {
     let address = &ctx.data().satisfactory_server;
     let token = &ctx.data().satisfactory_token;
-    let server_status = get_status(address, token).await?;
+    let server_status = satisfactory::get_status(address, token).await?;
 
     let reply = CreateReply::default().embed(
-        CreateEmbed::new()
+        serenity::CreateEmbed::new()
             .title("Status")
             .description(format!(
                 "{} of {} currently online.",
@@ -43,11 +40,9 @@ async fn main() {
     // Ignore dotenv errors and try to continue anyway
     let _ = dotenv();
 
-    let discord_token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
-    let satisfactory_server =
-        std::env::var("SATISFACTORY_SERVER").expect("missing SATISFACTORY_SERVER");
-    let satisfactory_token =
-        std::env::var("SATISFACTORY_TOKEN").expect("missing SATISFACTORY_TOKEN");
+    let discord_token = env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
+    let satisfactory_server = env::var("SATISFACTORY_SERVER").expect("missing SATISFACTORY_SERVER");
+    let satisfactory_token = env::var("SATISFACTORY_TOKEN").expect("missing SATISFACTORY_TOKEN");
 
     let data = Data {
         satisfactory_server,
@@ -70,28 +65,27 @@ async fn main() {
         })
         .build();
 
-    let client = poise::serenity_prelude::ClientBuilder::new(
-        discord_token,
-        serenity_prelude::GatewayIntents::non_privileged(),
-    )
-    .framework(framework)
-    .await;
+    let mut client =
+        serenity::ClientBuilder::new(discord_token, serenity::GatewayIntents::non_privileged())
+            .framework(framework)
+            .await
+            .unwrap();
 
-    client.unwrap().start().await.unwrap()
+    client.start().await.unwrap()
 }
 
-async fn poll_status(ctx: poise::serenity_prelude::Context, data: Data) {
+async fn poll_status(ctx: serenity::Context, data: Data) {
     loop {
         let discord_status =
-            match get_status(&data.satisfactory_server, &data.satisfactory_token).await {
+            match satisfactory::get_status(&data.satisfactory_server, &data.satisfactory_token)
+                .await
+            {
                 Err(_) => "an offline server".to_string(),
-                Ok(Players { online, max }) => format!("{online} of {max} players"),
+                Ok(satisfactory::Players { online, max }) => format!("{online} of {max} players"),
             };
         ctx.set_presence(
-            Some(poise::serenity_prelude::ActivityData::watching(
-                discord_status,
-            )),
-            serenity_prelude::OnlineStatus::Online,
+            Some(serenity::ActivityData::watching(discord_status)),
+            serenity::OnlineStatus::Online,
         );
         sleep(Duration::from_secs(60)).await;
     }
