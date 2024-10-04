@@ -1,0 +1,11 @@
+[package]
+name = "sssb"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dotenv = "0.15.0"
+isahc = { version = "1.7.2", features = ["json"] }
+poise = "0.5.7"
+serde = { version = "1.0.210", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["rt-multi-thread"] }
