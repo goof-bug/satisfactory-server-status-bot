@@ -31,6 +31,7 @@ struct StatusResponseWrapper {
 }
 
 pub async fn get_status(address: &str, token: &str) -> Result<Players, Error> {
+    // Ignore invalid certificates since the satisfactory server uses a self-signed certificate
     let client = isahc::HttpClient::builder()
         .ssl_options(
             SslOption::DANGER_ACCEPT_INVALID_CERTS | SslOption::DANGER_ACCEPT_INVALID_HOSTS,
