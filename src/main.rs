@@ -1,5 +1,8 @@
 use dotenv::dotenv;
-use poise::serenity_prelude::{self, model::gateway::Activity};
+use poise::{
+    serenity_prelude::{self, CreateEmbed},
+    CreateReply,
+};
 use tokio::time::{sleep, Duration};
 
 mod satisfactory;
@@ -22,18 +25,16 @@ async fn status(ctx: Context<'_>) -> Result<(), Error> {
     let token = &ctx.data().satisfactory_token;
     let server_status = get_status(address, token).await?;
 
-    ctx.send(|f| {
-        f.embed(|e| {
-            e.title("Status")
-                .description(format!(
-                    "{} of {} currently online.",
-                    server_status.online, server_status.max
-                ))
-                .color(0x168064);
-            e
-        })
-    })
-    .await?;
+    let reply = CreateReply::default().embed(
+        CreateEmbed::new()
+            .title("Status")
+            .description(format!(
+                "{} of {} currently online.",
+                server_status.online, server_status.max
+            ))
+            .color(0x168064),
+    );
+    ctx.send(reply).await?;
     Ok(())
 }
 
@@ -58,8 +59,6 @@ async fn main() {
             commands: vec![status()],
             ..Default::default()
         })
-        .token(discord_token)
-        .intents(serenity_prelude::GatewayIntents::non_privileged())
         .setup(|ctx, _ready, framework| {
             // Spawn the tasks that polls and updates the status in the background
             tokio::task::spawn(poll_status(ctx.clone(), data.clone()));
@@ -68,11 +67,17 @@ async fn main() {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(data.clone())
             })
-        });
+        })
+        .build();
 
-    let bot = framework.build().await.unwrap();
+    let client = poise::serenity_prelude::ClientBuilder::new(
+        discord_token,
+        serenity_prelude::GatewayIntents::non_privileged(),
+    )
+    .framework(framework)
+    .await;
 
-    bot.start().await.unwrap();
+    client.unwrap().start().await.unwrap()
 }
 
 async fn poll_status(ctx: poise::serenity_prelude::Context, data: Data) {
@@ -83,10 +88,11 @@ async fn poll_status(ctx: poise::serenity_prelude::Context, data: Data) {
                 Ok(Players { online, max }) => format!("{online} of {max} players"),
             };
         ctx.set_presence(
-            Some(Activity::watching(discord_status)),
+            Some(poise::serenity_prelude::ActivityData::watching(
+                discord_status,
+            )),
             serenity_prelude::OnlineStatus::Online,
-        )
-        .await;
+        );
         sleep(Duration::from_secs(60)).await;
     }
 }
