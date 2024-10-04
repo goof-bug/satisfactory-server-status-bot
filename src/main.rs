@@ -40,6 +40,8 @@ async fn main() {
     // Ignore dotenv errors and try to continue anyway
     let _ = dotenv();
 
+    env_logger::init();
+
     let discord_token = env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
     let satisfactory_server = env::var("SATISFACTORY_SERVER").expect("missing SATISFACTORY_SERVER");
     let satisfactory_token = env::var("SATISFACTORY_TOKEN").expect("missing SATISFACTORY_TOKEN");
